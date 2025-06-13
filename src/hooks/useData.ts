@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Machinery, Vehicle, Tool, SparePart, Warehouse, Alert, DashboardStats } from '../types';
 
 // Mock data
@@ -280,22 +280,38 @@ export const useData = () => {
   const [spareParts] = useState<SparePart[]>(mockSpareParts);
   const [alerts] = useState<Alert[]>(mockAlerts);
   
-  const [dashboardStats] = useState<DashboardStats>({
-    totalMachinery: 3,
-    availableMachinery: 1,
-    totalVehicles: 2,
-    availableVehicles: 1,
-    totalTools: 4,
-    availableTools: 3,
-    totalRentals: 5,
-    activeRentals: 2,
-    criticalAlerts: 3,
-    pendingMaintenances: 2,
-    monthlyRevenue: 125000,
-    monthlyExpenses: 45000,
-    profitMargin: 64,
-    utilizationRate: 75
-  });
+  // Memoize dashboard stats calculation
+  const dashboardStats = useMemo<DashboardStats>(() => {
+    const availableMachinery = machinery.filter(m => m.status === 'disponible').length;
+    const availableVehicles = vehicles.filter(v => v.status === 'disponible').length;
+    const availableTools = tools.filter(t => t.status === 'disponible').length;
+    const criticalAlerts = alerts.filter(a => a.severity === 'critical' && !a.resolved).length;
+    
+    return {
+      totalMachinery: machinery.length,
+      availableMachinery,
+      totalVehicles: vehicles.length,
+      availableVehicles,
+      totalTools: tools.length,
+      availableTools,
+      totalRentals: 5,
+      activeRentals: 2,
+      criticalAlerts,
+      pendingMaintenances: 2,
+      monthlyRevenue: 125000,
+      monthlyExpenses: 45000,
+      profitMargin: 64,
+      utilizationRate: 75
+    };
+  }, [machinery, vehicles, tools, alerts]);
+
+  // Memoize warehouse lookup
+  const warehouseMap = useMemo(() => {
+    return warehouses.reduce((map, warehouse) => {
+      map[warehouse.id] = warehouse;
+      return map;
+    }, {} as Record<string, Warehouse>);
+  }, [warehouses]);
 
   return {
     warehouses,
@@ -304,6 +320,7 @@ export const useData = () => {
     tools,
     spareParts,
     alerts,
-    dashboardStats
+    dashboardStats,
+    warehouseMap
   };
 };

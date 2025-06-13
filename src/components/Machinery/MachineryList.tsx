@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Filter, Plus, Eye, Edit, Wrench } from 'lucide-react';
 import { Machinery } from '../../types';
 import { useData } from '../../hooks/useData';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../hooks/useToast';
 import { useRealTimeUpdates } from '../../hooks/useRealTimeUpdates';
 import { MachineryForm } from '../Forms/MachineryForm';
 import { ExportButton } from '../Common/ExportButton';
 import { ActionButton } from '../Common/ActionButton';
 import { ConfirmationModal } from '../Common/ConfirmationModal';
+import { VirtualizedTable } from '../Common/VirtualizedTable';
+import { LazyImage } from '../Common/LazyImage';
 
 const statusColors = {
   disponible: 'bg-green-100 text-green-800',
@@ -38,7 +41,7 @@ const conditionLabels = {
 };
 
 export const MachineryList: React.FC = () => {
-  const { machinery, warehouses } = useData();
+  const { machinery, warehouses, warehouseMap } = useData();
   const { success, error } = useToast();
   const { broadcastUpdate } = useRealTimeUpdates();
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,20 +52,26 @@ export const MachineryList: React.FC = () => {
     isOpen: false
   });
 
-  const filteredMachinery = machinery.filter(machine => {
-    const matchesSearch = machine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         machine.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         machine.model.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || machine.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Debounce search term for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const getWarehouseName = (warehouseId: string) => {
-    const warehouse = warehouses.find(w => w.id === warehouseId);
-    return warehouse?.name || 'N/A';
-  };
+  // Memoize filtered machinery to avoid unnecessary recalculations
+  const filteredMachinery = useMemo(() => {
+    return machinery.filter(machine => {
+      const matchesSearch = machine.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           machine.brand.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           machine.model.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || machine.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [machinery, debouncedSearchTerm, statusFilter]);
 
-  const handleSave = async (machineryData: Partial<Machinery>) => {
+  // Memoize warehouse name lookup
+  const getWarehouseName = useCallback((warehouseId: string) => {
+    return warehouseMap[warehouseId]?.name || 'N/A';
+  }, [warehouseMap]);
+
+  const handleSave = useCallback(async (machineryData: Partial<Machinery>) => {
     try {
       console.log('Saving machinery:', machineryData);
       
@@ -96,14 +105,14 @@ export const MachineryList: React.FC = () => {
         'No se pudo guardar la maquinaria. Intenta nuevamente.'
       );
     }
-  };
+  }, [selectedMachinery, broadcastUpdate, success, error]);
 
-  const handleEdit = (machinery: Machinery) => {
+  const handleEdit = useCallback((machinery: Machinery) => {
     setSelectedMachinery(machinery);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleDelete = async (machinery: Machinery) => {
+  const handleDelete = useCallback(async (machinery: Machinery) => {
     try {
       console.log('Deleting machinery:', machinery.id);
       
@@ -132,7 +141,71 @@ export const MachineryList: React.FC = () => {
         'No se pudo eliminar la maquinaria. Intenta nuevamente.'
       );
     }
-  };
+  }, [broadcastUpdate, success, error]);
+
+  // Render machinery row for virtualization
+  const renderMachineryRow = useCallback((machine: Machinery, index: number) => (
+    <tr key={machine.id} className="hover:bg-gray-50 transition-colors">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+            {machine.images[0] ? (
+              <LazyImage
+                src={machine.images[0]}
+                alt={machine.name}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <div className="w-6 h-6 bg-gray-400 rounded"></div>
+            )}
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{machine.name}</div>
+            <div className="text-sm text-gray-500">{machine.category}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">{machine.brand}</div>
+        <div className="text-sm text-gray-500">{machine.model}</div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {machine.hourmeter.toLocaleString()} hrs
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${conditionColors[machine.condition]}`}>
+          {conditionLabels[machine.condition]}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[machine.status]}`}>
+          {statusLabels[machine.status]}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {getWarehouseName(machine.warehouseId)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {machine.nextMaintenance ? machine.nextMaintenance.toLocaleDateString() : 'No programado'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div className="flex items-center space-x-2 justify-end">
+          <button className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors">
+            <Eye className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => handleEdit(machine)}
+            className="text-gray-600 hover:text-gray-900 p-1 rounded transition-colors"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button className="text-green-600 hover:text-green-900 p-1 rounded transition-colors">
+            <Wrench className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  ), [getWarehouseName, handleEdit]);
 
   return (
     <div className="space-y-6">
@@ -222,68 +295,20 @@ export const MachineryList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMachinery.map((machine) => (
-                <tr key={machine.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                        {machine.images[0] ? (
-                          <img
-                            src={machine.images[0]}
-                            alt={machine.name}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 bg-gray-400 rounded"></div>
-                        )}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{machine.name}</div>
-                        <div className="text-sm text-gray-500">{machine.category}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{machine.brand}</div>
-                    <div className="text-sm text-gray-500">{machine.model}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {machine.hourmeter.toLocaleString()} hrs
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${conditionColors[machine.condition]}`}>
-                      {conditionLabels[machine.condition]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[machine.status]}`}>
-                      {statusLabels[machine.status]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getWarehouseName(machine.warehouseId)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {machine.nextMaintenance ? machine.nextMaintenance.toLocaleDateString() : 'No programado'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center space-x-2 justify-end">
-                      <button className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleEdit(machine)}
-                        className="text-gray-600 hover:text-gray-900 p-1 rounded transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="text-green-600 hover:text-green-900 p-1 rounded transition-colors">
-                        <Wrench className="w-4 h-4" />
-                      </button>
-                    </div>
+              {filteredMachinery.length > 20 ? (
+                <tr>
+                  <td colSpan={8} className="p-0">
+                    <VirtualizedTable
+                      data={filteredMachinery}
+                      itemHeight={80}
+                      containerHeight={600}
+                      renderItem={renderMachineryRow}
+                    />
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredMachinery.map(renderMachineryRow)
+              )}
             </tbody>
           </table>
         </div>
