@@ -23,7 +23,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageCha
         isCollapsed={sidebarCollapsed}
       />
       <div className="flex-1 flex flex-col">
-        <Header onToggleSidebar={toggleSidebar} />
+        <Header 
+          onToggleSidebar={toggleSidebar}
+          onPageChange={onPageChange}
+        />
         <main className="flex-1 p-6">
           {children}
         </main>

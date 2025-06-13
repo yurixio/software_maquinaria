@@ -1,17 +1,50 @@
-import React from 'react';
-import { Truck, Car, Wrench, AlertTriangle, DollarSign, TrendingUp, Package, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Truck, Car, Wrench, AlertTriangle, DollarSign, TrendingUp, Package, Calendar, Plus } from 'lucide-react';
 import { StatsCard } from './StatsCard';
 import { AlertsPanel } from './AlertsPanel';
 import { useData } from '../../hooks/useData';
+import { useToast } from '../../hooks/useToast';
+import { MaintenanceQuickForm } from '../Forms/MaintenanceQuickForm';
 
 export const Dashboard: React.FC = () => {
   const { dashboardStats, alerts, machinery, vehicles } = useData();
+  const { success } = useToast();
+  const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
+
+  const handleQuickMaintenance = () => {
+    setShowMaintenanceForm(true);
+  };
+
+  const handleMaintenanceSave = (maintenanceData: any) => {
+    console.log('Registering maintenance:', maintenanceData);
+    
+    // Simulate adding to finance automatically
+    const financeRecord = {
+      type: 'egreso',
+      category: 'Mantenimiento',
+      subcategory: maintenanceData.type,
+      description: `Mantenimiento ${maintenanceData.type} - ${maintenanceData.entityName}`,
+      amount: maintenanceData.totalCost,
+      date: new Date(),
+      relatedEntity: maintenanceData.entityType,
+      relatedEntityId: maintenanceData.entityId
+    };
+    
+    console.log('Auto-adding to finance:', financeRecord);
+    
+    success(
+      'Mantenimiento registrado',
+      `Se registró el mantenimiento y se agregó automáticamente a finanzas por S/ ${maintenanceData.totalCost.toLocaleString()}`
+    );
+    
+    setShowMaintenanceForm(false);
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Resumen general del sistema de gestión</p>
+        <p className="text-gray-600 mt-1">Resumen general del sistema de gestión - {new Date().toLocaleDateString()}</p>
       </div>
 
       {/* Stats Cards */}
@@ -95,7 +128,10 @@ export const Dashboard: React.FC = () => {
             <Package className="w-8 h-8 text-blue-600 mx-auto mb-2" />
             <span className="text-sm font-medium text-gray-900">Nuevo Alquiler</span>
           </button>
-          <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center">
+          <button 
+            onClick={handleQuickMaintenance}
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center"
+          >
             <Wrench className="w-8 h-8 text-green-600 mx-auto mb-2" />
             <span className="text-sm font-medium text-gray-900">Registrar Mantenimiento</span>
           </button>
@@ -109,6 +145,14 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Quick Maintenance Form */}
+      {showMaintenanceForm && (
+        <MaintenanceQuickForm
+          onSave={handleMaintenanceSave}
+          onCancel={() => setShowMaintenanceForm(false)}
+        />
+      )}
     </div>
   );
 };

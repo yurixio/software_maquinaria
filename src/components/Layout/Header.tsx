@@ -7,15 +7,25 @@ import { NotificationCenter } from '../Common/NotificationCenter';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
+  onPageChange?: (page: string) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
+export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, onPageChange }) => {
   const { user, logout } = useAuth();
   const { isConnected, lastUpdate } = useRealTimeUpdates();
 
   const handleNavigate = (url: string) => {
-    // In a real app, use router navigation
-    console.log('Navigate to:', url);
+    // Extract page from URL and navigate
+    const page = url.split('/')[1] || 'dashboard';
+    if (onPageChange) {
+      onPageChange(page);
+    }
+  };
+
+  const handleSettingsClick = () => {
+    if (onPageChange) {
+      onPageChange('settings');
+    }
   };
 
   return (
@@ -81,6 +91,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             
             {/* Settings */}
             <button 
+              onClick={handleSettingsClick}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
               title="Configuración"
             >

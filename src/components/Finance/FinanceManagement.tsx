@@ -3,7 +3,7 @@ import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Filter, Search } 
 import { FinancialRecord, ExpenseCategory } from '../../types';
 import { FinanceForm } from '../Forms/FinanceForm';
 
-// Mock data
+// Mock data with Viático category
 const mockFinancialRecords: FinancialRecord[] = [
   {
     id: '1',
@@ -12,10 +12,13 @@ const mockFinancialRecords: FinancialRecord[] = [
     subcategory: 'Excavadora',
     description: 'Alquiler Excavadora CAT 320D - Proyecto Lima Norte',
     amount: 2500,
+    currency: 'PEN',
     date: new Date('2024-03-15'),
+    status: 'pagado',
     relatedEntity: 'machinery',
     relatedEntityId: '1',
-    createdAt: new Date('2024-03-15')
+    createdAt: new Date('2024-03-15'),
+    createdBy: 'admin'
   },
   {
     id: '2',
@@ -23,10 +26,13 @@ const mockFinancialRecords: FinancialRecord[] = [
     category: 'Combustible',
     description: 'Carga de combustible - Excavadora CAT 320D',
     amount: 582,
+    currency: 'PEN',
     date: new Date('2024-03-14'),
+    status: 'pagado',
     relatedEntity: 'machinery',
     relatedEntityId: '1',
-    createdAt: new Date('2024-03-14')
+    createdAt: new Date('2024-03-14'),
+    createdBy: 'admin'
   },
   {
     id: '3',
@@ -35,9 +41,38 @@ const mockFinancialRecords: FinancialRecord[] = [
     subcategory: 'Operadores',
     description: 'Sueldo operador - Juan Pérez',
     amount: 1800,
+    currency: 'PEN',
     date: new Date('2024-03-01'),
+    status: 'pagado',
     isRecurring: true,
-    createdAt: new Date('2024-03-01')
+    createdAt: new Date('2024-03-01'),
+    createdBy: 'admin'
+  },
+  {
+    id: '4',
+    type: 'egreso',
+    category: 'Viático',
+    subcategory: 'Alimentación',
+    description: 'Viáticos para operador en obra - Proyecto Cañete',
+    amount: 150,
+    currency: 'PEN',
+    date: new Date('2024-03-16'),
+    status: 'pagado',
+    createdAt: new Date('2024-03-16'),
+    createdBy: 'admin'
+  },
+  {
+    id: '5',
+    type: 'egreso',
+    category: 'Viático',
+    subcategory: 'Transporte',
+    description: 'Pasajes y movilidad para técnico',
+    amount: 80,
+    currency: 'PEN',
+    date: new Date('2024-03-15'),
+    status: 'pagado',
+    createdAt: new Date('2024-03-15'),
+    createdBy: 'admin'
   }
 ];
 
@@ -46,31 +81,55 @@ const expenseCategories: ExpenseCategory[] = [
     id: '1',
     name: 'Sueldos',
     type: 'fijo',
-    subcategories: ['Operadores', 'Administrativos', 'Mecánicos']
+    subcategories: ['Operadores', 'Administrativos', 'Mecánicos'],
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    createdBy: 'admin'
   },
   {
     id: '2',
     name: 'Combustible',
     type: 'variable',
-    subcategories: ['Diesel', 'Gasolina']
+    subcategories: ['Diesel', 'Gasolina'],
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    createdBy: 'admin'
   },
   {
     id: '3',
     name: 'Mantenimiento',
     type: 'variable',
-    subcategories: ['Preventivo', 'Correctivo', 'Repuestos']
+    subcategories: ['Preventivo', 'Correctivo', 'Repuestos'],
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    createdBy: 'admin'
   },
   {
     id: '4',
     name: 'Servicios',
     type: 'fijo',
-    subcategories: ['Agua', 'Luz', 'Internet', 'Teléfono']
+    subcategories: ['Agua', 'Luz', 'Internet', 'Teléfono'],
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    createdBy: 'admin'
   },
   {
     id: '5',
     name: 'Reparaciones Urgentes',
     type: 'inesperado',
-    subcategories: ['Accidentes', 'Averías', 'Multas']
+    subcategories: ['Accidentes', 'Averías', 'Multas'],
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    createdBy: 'admin'
+  },
+  {
+    id: '6',
+    name: 'Viático',
+    type: 'variable',
+    subcategories: ['Alimentación', 'Hospedaje', 'Transporte', 'Otros gastos'],
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    createdBy: 'admin'
   }
 ];
 
@@ -108,7 +167,7 @@ export const FinanceManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestión Financiera</h1>
-          <p className="text-gray-600 mt-1">Control de ingresos, gastos y rentabilidad</p>
+          <p className="text-gray-600 mt-1">Control de ingresos, gastos y rentabilidad - {new Date().toLocaleDateString()}</p>
         </div>
         <button 
           onClick={() => setShowForm(true)}
@@ -276,6 +335,9 @@ export const FinanceManagement: React.FC = () => {
                   Monto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Recurrente
                 </th>
               </tr>
@@ -312,6 +374,16 @@ export const FinanceManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <span className={record.type === 'ingreso' ? 'text-green-600' : 'text-red-600'}>
                       {record.type === 'ingreso' ? '+' : '-'}S/ {record.amount.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      record.status === 'pagado' ? 'bg-green-100 text-green-800' :
+                      record.status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {record.status === 'pagado' ? 'Pagado' :
+                       record.status === 'pendiente' ? 'Pendiente' : 'Vencido'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

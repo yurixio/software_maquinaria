@@ -37,12 +37,19 @@ const menuItems = [
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, isCollapsed }) => {
+  const handleLogoClick = () => {
+    onPageChange('dashboard');
+  };
+
   return (
     <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
       isCollapsed ? 'w-16' : 'w-64'
     }`}>
       <div className="p-6">
-        <div className="flex items-center space-x-3">
+        <div 
+          className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={handleLogoClick}
+        >
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Truck className="w-5 h-5 text-white" />
           </div>
