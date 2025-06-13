@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus, Eye, Edit, Wrench, MapPin } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Wrench, MapPin, EyeOff } from 'lucide-react';
 import { Tool } from '../../types';
 import { useData } from '../../hooks/useData';
 import { ToolForm } from '../Forms/ToolForm';
+import { useToast } from '../../hooks/useToast';
 
 const statusColors = {
   disponible: 'bg-green-100 text-green-800',
@@ -16,18 +17,21 @@ const statusLabels = {
 
 export const ToolList: React.FC = () => {
   const { tools, warehouses } = useData();
+  const { success } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool | undefined>();
+  const [hiddenTools, setHiddenTools] = useState<Set<string>>(new Set());
 
   const filteredTools = tools.filter(tool => {
+    const isVisible = !hiddenTools.has(tool.id);
     const matchesSearch = tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          tool.internalCode.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || tool.status === statusFilter;
     const matchesWarehouse = warehouseFilter === 'all' || tool.warehouseId === warehouseFilter;
-    return matchesSearch && matchesStatus && matchesWarehouse;
+    return isVisible && matchesSearch && matchesStatus && matchesWarehouse;
   });
 
   const getWarehouseName = (warehouseId: string) => {
@@ -46,7 +50,29 @@ export const ToolList: React.FC = () => {
     setShowForm(true);
   };
 
-  const availableTools = tools.filter(t => t.status === 'disponible').length;
+  const handleToggleVisibility = (tool: Tool) => {
+    const isHidden = hiddenTools.has(tool.id);
+    
+    if (isHidden) {
+      setHiddenTools(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tool.id);
+        return newSet;
+      });
+      success('Herramienta visible', `${tool.name} ahora es visible en el sistema`);
+    } else {
+      setHiddenTools(prev => new Set([...prev, tool.id]));
+      success('Herramienta oculta', `${tool.name} ha sido ocultada del sistema`);
+    }
+  };
+
+  const handleMaintenance = (tool: Tool) => {
+    console.log('Registering maintenance for tool:', tool.id);
+    // In real app, open maintenance form
+    success('Mantenimiento registrado', `Se registró el mantenimiento para ${tool.name}`);
+  };
+
+  const availableTools = tools.filter(t => t.status === 'disponible' && !hiddenTools.has(t.id)).length;
 
   return (
     <div className="space-y-6">
@@ -54,7 +80,7 @@ export const ToolList: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Herramientas</h1>
           <p className="text-gray-600 mt-1">
-            Gestión de herramientas y equipos menores - {availableTools} de {tools.length} disponibles
+            Gestión de herramientas y equipos menores - {availableTools} de {tools.length - hiddenTools.size} disponibles
           </p>
         </div>
         <button 
@@ -72,7 +98,7 @@ export const ToolList: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Herramientas</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{tools.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{tools.length - hiddenTools.size}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <Wrench className="w-6 h-6 text-blue-600" />
@@ -96,7 +122,9 @@ export const ToolList: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">No Disponibles</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{tools.length - availableTools}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">
+                {tools.length - hiddenTools.size - availableTools}
+              </p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
               <Wrench className="w-6 h-6 text-red-600" />
@@ -214,14 +242,30 @@ export const ToolList: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center space-x-2 justify-end">
-                      <button className="text-blue-600 hover:text-blue-900 p-1 rounded">
-                        <Eye className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleToggleVisibility(tool)}
+                        className={`p-1 rounded transition-colors ${
+                          hiddenTools.has(tool.id) 
+                            ? 'text-gray-400 hover:text-gray-600' 
+                            : 'text-blue-600 hover:text-blue-900'
+                        }`}
+                        title={hiddenTools.has(tool.id) ? 'Mostrar' : 'Ocultar'}
+                      >
+                        {hiddenTools.has(tool.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                       <button 
                         onClick={() => handleEdit(tool)}
-                        className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                        className="text-gray-600 hover:text-gray-900 p-1 rounded transition-colors"
+                        title="Editar"
                       >
                         <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleMaintenance(tool)}
+                        className="text-green-600 hover:text-green-900 p-1 rounded transition-colors"
+                        title="Registrar mantenimiento"
+                      >
+                        <Wrench className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

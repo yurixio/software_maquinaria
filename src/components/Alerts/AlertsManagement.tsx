@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Clock, Package, FileText, CheckCircle, X, Calendar, Fuel } from 'lucide-react';
+import { AlertTriangle, Clock, Package, FileText, CheckCircle, X, Calendar, Fuel, User } from 'lucide-react';
 import { Alert } from '../../types';
 import { useData } from '../../hooks/useData';
+import { useToast } from '../../hooks/useToast';
 
 const alertIcons = {
   maintenance: Clock,
@@ -33,25 +34,40 @@ const typeLabels = {
 
 export const AlertsManagement: React.FC = () => {
   const { alerts } = useData();
+  const { success } = useToast();
   const [filter, setFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [showResolved, setShowResolved] = useState(false);
+  const [resolvedAlerts, setResolvedAlerts] = useState<Set<string>>(new Set());
 
   const filteredAlerts = alerts.filter(alert => {
+    const isResolved = resolvedAlerts.has(alert.id);
     const matchesType = filter === 'all' || alert.type === filter;
     const matchesSeverity = severityFilter === 'all' || alert.severity === severityFilter;
-    const matchesResolved = showResolved || !alert.resolved;
+    const matchesResolved = showResolved || !isResolved;
     return matchesType && matchesSeverity && matchesResolved;
   });
 
-  const handleResolveAlert = (alertId: string) => {
-    console.log('Resolving alert:', alertId);
-    // In real app, update alert status
+  const handleResolveAlert = (alert: Alert) => {
+    setResolvedAlerts(prev => new Set([...prev, alert.id]));
+    
+    // In real app, update alert status in backend
+    console.log('Resolving alert:', {
+      alertId: alert.id,
+      resolvedBy: 'current-user',
+      resolvedAt: new Date(),
+      resolutionNotes: 'Alerta resuelta desde el panel de gestión'
+    });
+
+    success(
+      'Alerta resuelta',
+      `La alerta "${alert.title}" ha sido marcada como resuelta`
+    );
   };
 
-  const criticalAlerts = alerts.filter(a => a.severity === 'critical' && !a.resolved).length;
-  const highAlerts = alerts.filter(a => a.severity === 'high' && !a.resolved).length;
-  const unresolvedAlerts = alerts.filter(a => !a.resolved).length;
+  const criticalAlerts = alerts.filter(a => a.severity === 'critical' && !resolvedAlerts.has(a.id)).length;
+  const highAlerts = alerts.filter(a => a.severity === 'high' && !resolvedAlerts.has(a.id)).length;
+  const unresolvedAlerts = alerts.filter(a => !resolvedAlerts.has(a.id)).length;
 
   return (
     <div className="space-y-6">
@@ -107,7 +123,7 @@ export const AlertsManagement: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Resueltas</p>
               <p className="text-2xl font-bold text-green-600 mt-1">
-                {alerts.filter(a => a.resolved).length}
+                {resolvedAlerts.size}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -160,11 +176,14 @@ export const AlertsManagement: React.FC = () => {
       <div className="space-y-4">
         {filteredAlerts.map((alert) => {
           const Icon = alertIcons[alert.type];
+          const isResolved = resolvedAlerts.has(alert.id);
           
           return (
             <div
               key={alert.id}
-              className={`bg-white rounded-xl shadow-sm border-l-4 p-6 ${severityColors[alert.severity]}`}
+              className={`bg-white rounded-xl shadow-sm border-l-4 p-6 ${
+                isResolved ? 'opacity-60' : ''
+              } ${severityColors[alert.severity]}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
@@ -190,17 +209,23 @@ export const AlertsManagement: React.FC = () => {
                       <span>•</span>
                       <span>Entidad: {alert.relatedEntity}</span>
                     </div>
+                    {isResolved && (
+                      <div className="flex items-center space-x-2 mt-2 text-sm text-green-600">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Resuelta por Usuario Actual el {new Date().toLocaleDateString()}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {alert.resolved ? (
+                  {isResolved ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                       <CheckCircle className="w-4 h-4 mr-1" />
                       Resuelta
                     </span>
                   ) : (
                     <button
-                      onClick={() => handleResolveAlert(alert.id)}
+                      onClick={() => handleResolveAlert(alert)}
                       className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />

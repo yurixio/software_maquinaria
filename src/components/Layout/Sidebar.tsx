@@ -12,7 +12,8 @@ import {
   Settings, 
   Users,
   Fuel,
-  Package2
+  Package2,
+  Calendar
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ const menuItems = [
   { id: 'warehouses', icon: Warehouse, label: 'Almacenes' },
   { id: 'machinery', icon: Truck, label: 'Maquinaria' },
   { id: 'vehicles', icon: Car, label: 'Vehículos' },
+  { id: 'rentals', icon: Calendar, label: 'Alquileres' },
   { id: 'fuel', icon: Fuel, label: 'Combustible' },
   { id: 'tools', icon: Wrench, label: 'Herramientas' },
   { id: 'spareparts', icon: Package2, label: 'Repuestos' },

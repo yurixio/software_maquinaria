@@ -12,6 +12,7 @@ const Dashboard = lazy(() => import('./components/Dashboard/Dashboard').then(m =
 const MachineryList = lazy(() => import('./components/Machinery/MachineryList').then(m => ({ default: m.MachineryList })));
 const VehicleList = lazy(() => import('./components/Vehicles/VehicleList').then(m => ({ default: m.VehicleList })));
 const WarehouseList = lazy(() => import('./components/Warehouses/WarehouseList').then(m => ({ default: m.WarehouseList })));
+const RentalList = lazy(() => import('./components/Rentals/RentalList').then(m => ({ default: m.RentalList })));
 const FuelManagement = lazy(() => import('./components/Fuel/FuelManagement').then(m => ({ default: m.FuelManagement })));
 const ToolList = lazy(() => import('./components/Tools/ToolList').then(m => ({ default: m.ToolList })));
 const SparePartList = lazy(() => import('./components/SpareParts/SparePartList').then(m => ({ default: m.SparePartList })));
@@ -57,6 +58,7 @@ function AppContent() {
       warehouses: WarehouseList,
       machinery: MachineryList,
       vehicles: VehicleList,
+      rentals: RentalList,
       fuel: FuelManagement,
       tools: ToolList,
       spareparts: SparePartList,
@@ -71,7 +73,7 @@ function AppContent() {
 
     return (
       <Suspense fallback={<PageLoader />}>
-        <Component />
+        <Component onPageChange={setCurrentPage} />
       </Suspense>
     );
   };

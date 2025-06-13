@@ -10,6 +10,7 @@ export interface User {
   createdBy?: string;
   updatedAt?: Date;
   updatedBy?: string;
+  warehouseRestrictions?: string[];
 }
 
 export type UserRole = 'admin' | 'warehouse' | 'mechanic' | 'accountant' | 'viewer';
@@ -74,6 +75,7 @@ export interface Warehouse {
   updatedBy?: string;
   notes?: string;
   attachments?: Attachment[];
+  isActive?: boolean;
 }
 
 export interface Machinery {
@@ -106,6 +108,8 @@ export interface Machinery {
   specifications?: Record<string, string>;
   fuelType?: string;
   fuelCapacity?: number;
+  isVisible?: boolean;
+  maintenanceHistory?: MaintenanceRecord[];
 }
 
 export interface Vehicle {
@@ -133,6 +137,8 @@ export interface Vehicle {
   attachments?: Attachment[];
   fuelType?: string;
   fuelCapacity?: number;
+  isVisible?: boolean;
+  maintenanceHistory?: MaintenanceRecord[];
 }
 
 export interface VehicleDocument {
@@ -169,6 +175,8 @@ export interface Tool {
   attachments?: Attachment[];
   lastMaintenanceDate?: Date;
   nextMaintenanceDate?: Date;
+  isVisible?: boolean;
+  maintenanceHistory?: MaintenanceRecord[];
 }
 
 export interface SparePart {
@@ -198,6 +206,7 @@ export interface SparePart {
   attachments?: Attachment[];
   lastPurchaseDate?: Date;
   lastPurchasePrice?: number;
+  predefinedCategory?: 'filtro_aire_primario' | 'filtro_aire_secundario' | 'filtro_petroleo' | 'filtro_aceite' | 'filtro_hidraulico' | 'grasa' | 'aceite' | 'otros';
 }
 
 export interface FuelRecord {
@@ -264,11 +273,20 @@ export interface MaintenanceSparePart {
   warehouseId: string;
 }
 
+export interface WorkingHoursRecord {
+  date: Date;
+  hours: number;
+  description: string;
+  recordedBy?: string;
+  recordedAt?: Date;
+}
+
 export interface Rental {
   id: string;
   clientName: string;
   clientContact: string;
   clientEmail?: string;
+  clientPhone?: string;
   clientAddress?: string;
   clientDocument?: string;
   machineryId?: string;
@@ -297,6 +315,7 @@ export interface Rental {
   checkInOdometer?: number;
   checkOutOdometer?: number;
   damageReport?: string;
+  workingHours?: WorkingHoursRecord[];
   createdAt: Date;
   createdBy: string;
   updatedAt?: Date;

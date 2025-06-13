@@ -4,10 +4,22 @@ import { SparePart } from '../../types';
 import { useData } from '../../hooks/useData';
 import { SparePartForm } from '../Forms/SparePartForm';
 
+const predefinedCategories = [
+  { value: 'filtro_aire_primario', label: 'Filtro de Aire Primario' },
+  { value: 'filtro_aire_secundario', label: 'Filtro de Aire Secundario' },
+  { value: 'filtro_petroleo', label: 'Filtro de Petróleo' },
+  { value: 'filtro_aceite', label: 'Filtro de Aceite' },
+  { value: 'filtro_hidraulico', label: 'Filtro Hidráulico' },
+  { value: 'grasa', label: 'Grasa' },
+  { value: 'aceite', label: 'Aceite' },
+  { value: 'otros', label: 'Otros' }
+];
+
 export const SparePartList: React.FC = () => {
   const { spareParts, warehouses, machinery } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedSparePart, setSelectedSparePart] = useState<SparePart | undefined>();
@@ -23,7 +35,9 @@ export const SparePartList: React.FC = () => {
     const matchesWarehouse = warehouseFilter === 'all' || 
                            (part.stockByWarehouse[warehouseFilter] && part.stockByWarehouse[warehouseFilter] > 0);
     
-    return matchesSearch && matchesLowStock && matchesWarehouse;
+    const matchesCategory = categoryFilter === 'all' || part.predefinedCategory === categoryFilter;
+    
+    return matchesSearch && matchesLowStock && matchesWarehouse && matchesCategory;
   });
 
   const getTotalStock = (part: SparePart) => {
@@ -131,46 +145,58 @@ export const SparePartList: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, código o marca..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, código o marca..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
-          <div className="flex items-center space-x-4">
-            <select
-              value={warehouseFilter}
-              onChange={(e) => setWarehouseFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">Todos los almacenes</option>
-              {warehouses.map(warehouse => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={lowStockOnly}
-                onChange={(e) => setLowStockOnly(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Solo stock bajo</span>
-            </label>
-            <button className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Filter className="w-4 h-4" />
-              <span>Filtros</span>
-            </button>
-          </div>
+          
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">Todas las categorías</option>
+            {predefinedCategories.map(category => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={warehouseFilter}
+            onChange={(e) => setWarehouseFilter(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">Todos los almacenes</option>
+            {warehouses.map(warehouse => (
+              <option key={warehouse.id} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </select>
+
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={lowStockOnly}
+              onChange={(e) => setLowStockOnly(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Solo stock bajo</span>
+          </label>
+
+          <button className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <Filter className="w-4 h-4" />
+            <span>Filtros</span>
+          </button>
         </div>
       </div>
 
@@ -185,6 +211,9 @@ export const SparePartList: React.FC = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Código
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Categoría
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Marca
@@ -210,6 +239,7 @@ export const SparePartList: React.FC = () => {
               {filteredSpareParts.map((part) => {
                 const totalStock = getTotalStock(part);
                 const stockStatus = getStockStatus(part);
+                const categoryLabel = predefinedCategories.find(c => c.value === part.predefinedCategory)?.label || 'Otros';
                 
                 return (
                   <tr key={part.id} className="hover:bg-gray-50">
@@ -225,6 +255,11 @@ export const SparePartList: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {part.code}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                        {categoryLabel}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {part.brand}
@@ -284,11 +319,11 @@ export const SparePartList: React.FC = () => {
             <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron repuestos</h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || warehouseFilter !== 'all' || lowStockOnly
+              {searchTerm || warehouseFilter !== 'all' || categoryFilter !== 'all' || lowStockOnly
                 ? 'Intenta con otros filtros de búsqueda' 
                 : 'Comienza registrando tu primer repuesto'}
             </p>
-            {!searchTerm && warehouseFilter === 'all' && !lowStockOnly && (
+            {!searchTerm && warehouseFilter === 'all' && categoryFilter === 'all' && !lowStockOnly && (
               <button 
                 onClick={() => setShowForm(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
