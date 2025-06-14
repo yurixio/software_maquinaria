@@ -7,9 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.js",
+    "build:prod": "npm run build && npm run copy-files",
+    "copy-files": "cp server.js dist/ && cp web.config dist/ && cp package-prod.json dist/package.json",
+    "deploy:azure": "npm run build:prod && cd dist && zip -r ../deploy.zip .",
+    "serve:prod": "cd dist && node server.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
