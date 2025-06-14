@@ -5,69 +5,10 @@ import { UserForm } from '../Forms/UserForm';
 import { UserPermissions } from './UserPermissions';
 import { ActivityLogViewer } from './ActivityLogViewer';
 import { ExportButton } from '../Common/ExportButton';
+import { useDataStore } from '../../hooks/useDataStore';
+import { useToast } from '../../hooks/useToast';
 
-// Mock data
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'Administrador Principal',
-    email: 'admin@maquinaria.com',
-    role: 'admin',
-    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=100&h=100&fit=crop&crop=face',
-    lastLogin: new Date('2024-03-15T10:30:00'),
-    createdAt: new Date('2024-01-01'),
-    createdBy: 'system',
-    permissions: [
-      { module: 'all', actions: ['create', 'read', 'update', 'delete'] }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Carlos Méndez',
-    email: 'carlos.mendez@maquinaria.com',
-    role: 'mechanic',
-    lastLogin: new Date('2024-03-14T16:45:00'),
-    createdAt: new Date('2024-01-15'),
-    createdBy: '1',
-    permissions: [
-      { module: 'machinery', actions: ['read', 'update'] },
-      { module: 'maintenance', actions: ['create', 'read', 'update'] },
-      { module: 'tools', actions: ['read'] }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Ana García',
-    email: 'ana.garcia@maquinaria.com',
-    role: 'warehouse',
-    lastLogin: new Date('2024-03-15T08:20:00'),
-    createdAt: new Date('2024-01-20'),
-    createdBy: '1',
-    permissions: [
-      { module: 'warehouses', actions: ['read', 'update'] },
-      { module: 'tools', actions: ['create', 'read', 'update', 'delete'] },
-      { module: 'spareparts', actions: ['create', 'read', 'update', 'delete'] },
-      { module: 'machinery', actions: ['read'] },
-      { module: 'vehicles', actions: ['read'] }
-    ],
-    warehouseRestrictions: ['1', '2']
-  },
-  {
-    id: '4',
-    name: 'Roberto Silva',
-    email: 'roberto.silva@maquinaria.com',
-    role: 'accountant',
-    lastLogin: new Date('2024-03-13T14:15:00'),
-    createdAt: new Date('2024-02-01'),
-    createdBy: '1',
-    permissions: [
-      { module: 'finance', actions: ['create', 'read', 'update', 'delete'] },
-      { module: 'reports', actions: ['read'] },
-      { module: 'rentals', actions: ['read', 'update'] }
-    ]
-  }
-];
-
+// Mock activity logs (these would come from a real logging system)
 const mockActivityLogs: ActivityLog[] = [
   {
     id: '1',
@@ -114,7 +55,8 @@ const roleColors = {
 };
 
 export const UserManagement: React.FC = () => {
-  const [users] = useState<User[]>(mockUsers);
+  const { users, addUser, updateUser, deleteUser } = useDataStore();
+  const { success, error } = useToast();
   const [activityLogs] = useState<ActivityLog[]>(mockActivityLogs);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -131,9 +73,19 @@ export const UserManagement: React.FC = () => {
   });
 
   const handleSave = (userData: Partial<User>) => {
-    console.log('Saving user:', userData);
-    setShowForm(false);
-    setSelectedUser(undefined);
+    try {
+      if (selectedUser) {
+        updateUser(selectedUser.id, userData);
+        success('Usuario actualizado', `${userData.name} ha sido actualizado exitosamente`);
+      } else {
+        addUser(userData as Omit<User, 'id' | 'createdAt' | 'createdBy'>);
+        success('Usuario creado', `${userData.name} ha sido creado exitosamente`);
+      }
+      setShowForm(false);
+      setSelectedUser(undefined);
+    } catch (err) {
+      error('Error al guardar', 'No se pudo guardar el usuario');
+    }
   };
 
   const handleEdit = (user: User) => {
@@ -147,8 +99,14 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleDelete = (userId: string) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-      console.log('Deleting user:', userId);
+    const user = users.find(u => u.id === userId);
+    if (user && confirm(`¿Estás seguro de que deseas eliminar a ${user.name}?`)) {
+      try {
+        deleteUser(userId);
+        success('Usuario eliminado', `${user.name} ha sido eliminado del sistema`);
+      } catch (err) {
+        error('Error al eliminar', 'No se pudo eliminar el usuario');
+      }
     }
   };
 
@@ -439,7 +397,8 @@ export const UserManagement: React.FC = () => {
         <UserPermissions
           user={selectedUser}
           onSave={(permissions) => {
-            console.log('Saving permissions:', permissions);
+            updateUser(selectedUser.id, { permissions });
+            success('Permisos actualizados', `Los permisos de ${selectedUser.name} han sido actualizados`);
             setShowPermissions(false);
             setSelectedUser(undefined);
           }}

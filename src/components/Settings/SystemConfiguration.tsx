@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { Save, Upload, Calendar, DollarSign, AlertTriangle, Settings, Globe, Palette } from 'lucide-react';
 import { SystemConfig, AlertSettings, MaintenanceSettings, BackupSettings } from '../../types';
 import { useForm } from '../../hooks/useForm';
-import { useData } from '../../hooks/useData';
+import { useDataStore } from '../../hooks/useDataStore';
+import { useToast } from '../../hooks/useToast';
 
-// Mock system configuration
-const mockSystemConfig: SystemConfig = {
+// Default system configuration
+const defaultSystemConfig: SystemConfig = {
   id: '1',
   companyName: 'MaquiRent S.A.C.',
   companyLogo: '',
   currency: 'PEN',
   taxRate: 18,
-  defaultWarehouseId: '1',
+  defaultWarehouseId: '',
   alertSettings: {
     documentExpirationDays: 30,
     stockMinimumThreshold: 5,
@@ -58,8 +59,23 @@ const themes = [
 ];
 
 export const SystemConfiguration: React.FC = () => {
-  const { warehouses } = useData();
-  const [config, setConfig] = useState<SystemConfig>(mockSystemConfig);
+  const { warehouses } = useDataStore();
+  const { success, error } = useToast();
+  const [config, setConfig] = useState<SystemConfig>(() => {
+    const saved = localStorage.getItem('systemConfig');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...parsed,
+        holidays: parsed.holidays.map((h: string) => new Date(h)),
+        updatedAt: new Date(parsed.updatedAt)
+      };
+    }
+    return {
+      ...defaultSystemConfig,
+      defaultWarehouseId: warehouses[0]?.id || ''
+    };
+  });
   const [activeTab, setActiveTab] = useState('general');
   const [logoPreview, setLogoPreview] = useState<string | null>(config.companyLogo || null);
 
@@ -138,8 +154,13 @@ export const SystemConfiguration: React.FC = () => {
         updatedBy: 'current-user'
       };
 
-      console.log('Saving system configuration:', updatedConfig);
-      setConfig(updatedConfig);
+      try {
+        localStorage.setItem('systemConfig', JSON.stringify(updatedConfig));
+        setConfig(updatedConfig);
+        success('Configuración guardada', 'La configuración del sistema ha sido actualizada exitosamente');
+      } catch (err) {
+        error('Error al guardar', 'No se pudo guardar la configuración');
+      }
     }
   });
 
@@ -147,7 +168,7 @@ export const SystemConfiguration: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert('El logo debe ser menor a 2MB');
+        error('Archivo muy grande', 'El logo debe ser menor a 2MB');
         return;
       }
 

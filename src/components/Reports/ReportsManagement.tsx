@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { FileText, Download, Calendar, TrendingUp, DollarSign, Truck, Package, BarChart3 } from 'lucide-react';
-import { useData } from '../../hooks/useData';
+import { useDataStore } from '../../hooks/useDataStore';
 
 export const ReportsManagement: React.FC = () => {
-  const { machinery, vehicles, spareParts, dashboardStats } = useData();
+  const { machinery, vehicles, spareParts, financialRecords } = useDataStore();
   const [selectedReport, setSelectedReport] = useState<string>('');
   const [dateRange, setDateRange] = useState({
     start: new Date().toISOString().split('T')[0],
@@ -70,13 +70,32 @@ export const ReportsManagement: React.FC = () => {
     alert(`Generando reporte: ${reportTypes.find(r => r.id === reportId)?.name}`);
   };
 
+  // Calculate real stats from data
+  const totalAssets = machinery.length + vehicles.length;
+  const availableAssets = machinery.filter(m => m.status === 'disponible').length + 
+                          vehicles.filter(v => v.status === 'disponible').length;
+  
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyIncome = financialRecords
+    .filter(r => r.type === 'ingreso' && 
+                 r.date.getMonth() === currentMonth && 
+                 r.date.getFullYear() === currentYear)
+    .reduce((sum, r) => sum + r.amount, 0);
+    
+  const monthlyExpenses = financialRecords
+    .filter(r => r.type === 'egreso' && 
+                 r.date.getMonth() === currentMonth && 
+                 r.date.getFullYear() === currentYear)
+    .reduce((sum, r) => sum + r.amount, 0);
+
   const quickStats = {
-    totalAssets: machinery.length + vehicles.length,
-    availableAssets: machinery.filter(m => m.status === 'disponible').length + 
-                    vehicles.filter(v => v.status === 'disponible').length,
-    monthlyRevenue: dashboardStats.monthlyRevenue,
-    monthlyExpenses: dashboardStats.monthlyExpenses,
-    netProfit: dashboardStats.monthlyRevenue - dashboardStats.monthlyExpenses
+    totalAssets,
+    availableAssets,
+    monthlyRevenue: monthlyIncome,
+    monthlyExpenses,
+    netProfit: monthlyIncome - monthlyExpenses
   };
 
   return (
